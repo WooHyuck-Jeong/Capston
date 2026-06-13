@@ -255,7 +255,7 @@ def draw_results(frame: np.ndarray, pairs, all_cones, img_w: int) -> np.ndarray:
         cv2.circle(vis, (mx, my), 10, (255, 255, 255), 1)
 
         # 중간점 → 이미지 중심선 오프셋 표시
-        cv2.line(vis, (int(cx_img), my), (mx, my), MID_COLOR, 1, cv2.LINE_AA)
+        # cv2.line(vis, (int(cx_img), my), (mx, my), MID_COLOR, 1, cv2.LINE_AA)
 
         # Bearing 텍스트
         d = "R" if pair.bearing_deg > 0 else ("L" if pair.bearing_deg < 0 else "C")
