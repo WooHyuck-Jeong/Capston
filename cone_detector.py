@@ -270,7 +270,7 @@ def draw_results(frame: np.ndarray, pairs, all_cones, img_w: int) -> np.ndarray:
                  (0, 255, 255), 1, cv2.LINE_AA)
 
         # 베어링 텍스트
-        arrow = "→" if pair.bearing_deg > 0 else "←" if pair.bearing_deg < 0 else "↑"
+        arrow = "R" if pair.bearing_deg > 0 else "L" if pair.bearing_deg < 0 else "C"
         text = f"Pair{pair.pair_index}: {pair.bearing_deg:+.1f}° {arrow}"
         cv2.putText(vis, text, (mx + 10, my + 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 255), 2)
@@ -298,7 +298,7 @@ def print_results(pairs, all_cones):
     print(f"  매칭 쌍: {len(pairs)}개")
     print("-"*60)
     for pair in pairs:
-        direction = "오른쪽" if pair.bearing_deg > 1 else ("왼쪽" if pair.bearing_deg < -1 else "정면")
+        direction = "RIGHT" if pair.bearing_deg > 1 else ("LEFT" if pair.bearing_deg < -1 else "CENTER")
         print(f"  Pair {pair.pair_index}: "
               f"red[{pair.red.index}]({pair.red.cx:.0f}px) ↔ "
               f"blue[{pair.blue.index}]({pair.blue.cx:.0f}px)")
@@ -351,6 +351,10 @@ def main():
     if args.save and not is_image:
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
         writer = cv2.VideoWriter("output.mp4", fourcc, 30, (1280, 720))
+
+    # 창 설정 (크기 조정 가능)
+    cv2.namedWindow("Cone Detector", cv2.WINDOW_NORMAL)
+    cv2.resizeWindow("Cone Detector", 1280, 720)
 
     # ── 실행
     if is_image:
