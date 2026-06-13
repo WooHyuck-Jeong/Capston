@@ -78,10 +78,38 @@ class FisheyeCamera:
 
         self.fx = self.K_new[0, 0]
         self.cx = self.K_new[0, 2]
+
+        # 유효 영역 자동 계산 (검은 테두리 크롭용)
+        self.roi = self._calc_valid_roi()
         print(f"[Camera] Fisheye calibrated | fx={self.fx:.1f}, cx={self.cx:.1f}")
+        print(f"[Camera] Valid ROI: {self.roi}")
+
+    def _calc_valid_roi(self):
+        """Undistortion 후 유효한 픽셀 영역(ROI) 계산"""
+        import numpy as np
+        # 테스트 이미지로 유효 마스크 계산
+        test = np.ones((self.H, self.W), dtype=np.uint8) * 255
+        undist = cv2.remap(test, self.map1, self.map2, cv2.INTER_LINEAR)
+        # 유효 픽셀(>0) 찾기
+        rows = np.any(undist > 10, axis=1)
+        cols = np.any(undist > 10, axis=0)
+        if not np.any(rows) or not np.any(cols):
+            return (0, 0, self.W, self.H)
+        y1, y2 = np.where(rows)[0][[0, -1]]
+        x1, x2 = np.where(cols)[0][[0, -1]]
+        # 중앙 기준으로 좌우 대칭 크롭
+        cx = self.W // 2
+        half_w = min(cx - x1, x2 - cx)
+        roi_x1 = max(0, cx - half_w)
+        roi_x2 = min(self.W, cx + half_w)
+        return (int(roi_x1), int(y1), int(roi_x2), int(y2))
 
     def undistort(self, img: np.ndarray) -> np.ndarray:
-        return cv2.remap(img, self.map1, self.map2, cv2.INTER_LINEAR)
+        undist = cv2.remap(img, self.map1, self.map2, cv2.INTER_LINEAR)
+        # 유효 영역만 크롭 후 원본 해상도로 리사이즈
+        x1, y1, x2, y2 = self.roi
+        cropped = undist[y1:y2, x1:x2]
+        return cv2.resize(cropped, (self.W, self.H))
 
     def pixel_to_bearing(self, px: float) -> float:
         """보정된 이미지의 픽셀 x → bearing angle (도)"""
@@ -271,7 +299,7 @@ def draw_results(frame: np.ndarray, pairs, all_cones, img_w: int) -> np.ndarray:
 
         # 베어링 텍스트
         arrow = "R" if pair.bearing_deg > 0 else "L" if pair.bearing_deg < 0 else "C"
-        text = f"Pair{pair.pair_index}: {pair.bearing_deg:+.1f}° {arrow}"
+        text = f"Pair{pair.pair_index}: {pair.bearing_deg:+.1f}deg {arrow}"
         cv2.putText(vis, text, (mx + 10, my + 5),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 255), 2)
 
@@ -282,7 +310,7 @@ def draw_results(frame: np.ndarray, pairs, all_cones, img_w: int) -> np.ndarray:
                    f"R{pair.red.index}({pair.red.cx:.0f}px) <-> "
                    f"B{pair.blue.index}({pair.blue.cx:.0f}px) | "
                    f"mid=({pair.midpoint_x:.0f},{pair.midpoint_y:.0f}) | "
-                   f"bearing={pair.bearing_deg:+.2f}°")
+                   f"bearing={pair.bearing_deg:+.2f}deg")
         cv2.putText(vis, summary, (10, y_off),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
         y_off += 22
@@ -303,7 +331,7 @@ def print_results(pairs, all_cones):
               f"red[{pair.red.index}]({pair.red.cx:.0f}px) ↔ "
               f"blue[{pair.blue.index}]({pair.blue.cx:.0f}px)")
         print(f"           중간점=({pair.midpoint_x:.1f}, {pair.midpoint_y:.1f}px) "
-              f"| Bearing={pair.bearing_deg:+.2f}° [{direction}]")
+              f"| Bearing={pair.bearing_deg:+.2f}deg [{direction}]")
     print("="*60)
 
 
