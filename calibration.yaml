@@ -1,0 +1,26 @@
+camera_matrix:
+  cols: 3
+  data:
+  - 1470.7438692533126
+  - 0.0
+  - 683.898687743852
+  - 0.0
+  - 1467.497209847451
+  - 349.22180676745995
+  - 0.0
+  - 0.0
+  - 1.0
+  rows: 3
+camera_model: fisheye
+distortion_coefficients:
+  cols: 4
+  data:
+  - -0.07255897343072383
+  - -0.8982424783612479
+  - 5.843507908080637
+  - -11.724635776008753
+  rows: 1
+image_height: 720
+image_width: 1280
+note: ELP-USBFHD01M-L180, HFOV~195deg, 1280x720
+rms_error: 0.8530327801048255
