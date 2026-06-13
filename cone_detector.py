@@ -362,3 +362,7 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
+"""
+python3 cone_detector.py --source 0 --model best.pt --no-calib --hfov 53 --conf 0.9
+"""
