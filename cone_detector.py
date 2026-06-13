@@ -980,7 +980,7 @@ def draw_results(frame: np.ndarray, pairs, all_cones, img_w: int) -> np.ndarray:
         # Bearing 텍스트
         d = "R" if pair.bearing_deg > 0 else ("L" if pair.bearing_deg < 0 else "C")
         txt = f"Pair{pair.pair_index}: {pair.bearing_deg:+.1f}deg {d}"
-        cv2.putText(vis, txt, (mx + 12, my + 6),
+        cv2.putText(vis, txt, (mx + 10, my + 30),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.65, MID_COLOR, 2)
 
     # ⑤ 상단 요약 패널
