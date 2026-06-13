@@ -61,7 +61,9 @@ AXIS_COLOR  = (180, 180, 180) # 카메라 중심선
 
 # ── 카메라 모델 ──────────────────────────────────────────────────────────────
 
-class FisheyeCamera:
+class PinholeCamera:
+    """일반 핀홀 카메라 (ELP-USB500W02M-BL36, 3.6mm 렌즈)"""
+
     def __init__(self, calib_path: str):
         with open(calib_path, "r") as f:
             data = yaml.safe_load(f)
@@ -71,42 +73,30 @@ class FisheyeCamera:
         self.K = np.array(data["camera_matrix"]["data"],
                           dtype=np.float64).reshape(3, 3)
         self.D = np.array(data["distortion_coefficients"]["data"],
-                          dtype=np.float64).reshape(4, 1)
+                          dtype=np.float64).reshape(1, 5)
 
-        self.K_new = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
-            self.K, self.D, (self.W, self.H), np.eye(3), balance=0.5)
-        self.map1, self.map2 = cv2.fisheye.initUndistortRectifyMap(
-            self.K, self.D, np.eye(3), self.K_new,
+        # alpha=0: 유효 픽셀만 포함, 검은 영역 완전 제거
+        self.K_new, self.roi = cv2.getOptimalNewCameraMatrix(
+            self.K, self.D, (self.W, self.H), alpha=0)
+
+        # Undistortion 맵 미리 계산
+        self.map1, self.map2 = cv2.initUndistortRectifyMap(
+            self.K, self.D, None, self.K_new,
             (self.W, self.H), cv2.CV_16SC2)
 
         self.fx   = self.K_new[0, 0]
-        self.cx_p = self.K_new[0, 2]   # principal point x (보정 후)
-        self.roi  = self._calc_valid_roi()
-        print(f"[Camera] fx={self.fx:.1f}  cx={self.cx_p:.1f}  ROI={self.roi}")
-
-    def _calc_valid_roi(self):
-        test  = np.ones((self.H, self.W, 3), dtype=np.uint8) * 255
-        und   = cv2.remap(test, self.map1, self.map2, cv2.INTER_LINEAR)
-        gray  = cv2.cvtColor(und, cv2.COLOR_BGR2GRAY)
-        _, m  = cv2.threshold(gray, 10, 255, cv2.THRESH_BINARY)
-        cnts, _ = cv2.findContours(m, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-        if not cnts:
-            return (0, 0, self.W, self.H)
-        x, y, w, h = cv2.boundingRect(max(cnts, key=cv2.contourArea))
-        return (max(0,x), max(0,y), min(self.W,x+w), min(self.H,y+h))
+        self.cx_p = self.K_new[0, 2]
+        x, y, rw, rh = self.roi
+        print(f"[Camera] Pinhole | fx={self.fx:.1f}  cx={self.cx_p:.1f}")
+        print(f"[Camera] ROI=({x},{y},{x+rw},{y+rh})")
 
     def undistort(self, img: np.ndarray) -> np.ndarray:
-        und = cv2.remap(img, self.map1, self.map2, cv2.INTER_LINEAR)
-        x1, y1, x2, y2 = self.roi
-        return cv2.resize(und[y1:y2, x1:x2], (self.W, self.H))
+        # crop 없이 undistort만 적용 → 검은 화면 없음
+        return cv2.remap(img, self.map1, self.map2, cv2.INTER_LINEAR)
 
     def pixel_to_bearing(self, px: float) -> float:
-        # undistort + crop + resize 후 이미지 기준 → 실제 bearing
-        x1, _, x2, _ = self.roi
-        roi_w = x2 - x1
-        # resize된 좌표를 undistorted 원본 좌표로 역변환
-        px_und = x1 + px * roi_w / self.W
-        return math.degrees(math.atan2(px_und - self.cx_p, self.fx))
+        """핀홀 모델: bearing = arctan((px - cx) / fx)"""
+        return math.degrees(math.atan2(px - self.cx_p, self.fx))
 
 
 class ApproxCamera:
@@ -305,7 +295,7 @@ def main():
 
     camera = (ApproxCamera(1280, 720, args.hfov)
               if args.no_calib or args.calib is None
-              else FisheyeCamera(args.calib))
+              else PinholeCamera(args.calib))
 
     detector = ConeDetector(args.model, camera,
                             conf_thresh=args.conf,
@@ -362,7 +352,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
+
 """
-python3 cone_detector.py --source 0 --model best.pt --no-calib --hfov 53 --conf 0.9
+python3 cone_detector.py --source 0 --model best.pt --conf 0.83 --calib calibration.yaml
 """
