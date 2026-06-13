@@ -293,7 +293,7 @@
 #     parser.add_argument("--save",    action="store_true")
 #     args = parser.parse_args()
 
-#     camera = (ApproxCamera(1280, 720, args.hfov)
+#     camera = (ApproxCamera(640, 480, args.hfov)
 #               if args.no_calib or args.calib is None
 #               else PinholeCamera(args.calib))
 
@@ -1028,7 +1028,7 @@ def main():
     parser.add_argument("--save",    action="store_true")
     args = parser.parse_args()
 
-    camera = (ApproxCamera(1280, 720, args.hfov)
+    camera = (ApproxCamera(640, 480, args.hfov)
               if args.no_calib or args.calib is None
               else PinholeCamera(args.calib))
 
@@ -1040,8 +1040,8 @@ def main():
         source = int(args.source)
         cap = cv2.VideoCapture(source)
         # 캘리브레이션 해상도로 강제 설정
-        cap.set(cv2.CAP_PROP_FRAME_WIDTH,  1280)
-        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
+        cap.set(cv2.CAP_PROP_FRAME_WIDTH,  640)
+        cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         actual_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         actual_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         print(f"[CAP] 실제 해상도: {actual_w}x{actual_h}")
@@ -1054,10 +1054,10 @@ def main():
     writer = None
     if args.save and not is_image:
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        writer = cv2.VideoWriter("output.mp4", fourcc, 30, (1280, 720))
+        writer = cv2.VideoWriter("output.mp4", fourcc, 30, (640, 480))
 
     cv2.namedWindow("Cone Detector", cv2.WINDOW_NORMAL)
-    cv2.resizeWindow("Cone Detector", 1280, 720)
+    cv2.resizeWindow("Cone Detector", 640, 480)
 
     if is_image:
         frame = cv2.imread(args.source)
