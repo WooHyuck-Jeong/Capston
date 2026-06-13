@@ -74,7 +74,7 @@ class FisheyeCamera:
                           dtype=np.float64).reshape(4, 1)
 
         self.K_new = cv2.fisheye.estimateNewCameraMatrixForUndistortRectify(
-            self.K, self.D, (self.W, self.H), np.eye(3), balance=1.0)
+            self.K, self.D, (self.W, self.H), np.eye(3), balance=0.5)
         self.map1, self.map2 = cv2.fisheye.initUndistortRectifyMap(
             self.K, self.D, np.eye(3), self.K_new,
             (self.W, self.H), cv2.CV_16SC2)
@@ -93,9 +93,7 @@ class FisheyeCamera:
         if not cnts:
             return (0, 0, self.W, self.H)
         x, y, w, h = cv2.boundingRect(max(cnts, key=cv2.contourArea))
-        mg = 10
-        return (max(0,x+mg), max(0,y+mg),
-                min(self.W,x+w-mg), min(self.H,y+h-mg))
+        return (max(0,x), max(0,y), min(self.W,x+w), min(self.H,y+h))
 
     def undistort(self, img: np.ndarray) -> np.ndarray:
         und = cv2.remap(img, self.map1, self.map2, cv2.INTER_LINEAR)
@@ -253,9 +251,6 @@ def draw_results(frame: np.ndarray, pairs, all_cones, img_w: int) -> np.ndarray:
         # 중간점
         cv2.circle(vis, (mx, my), 8, MID_COLOR, -1)
         cv2.circle(vis, (mx, my), 10, (255, 255, 255), 1)
-
-        # 중간점 → 이미지 중심선 오프셋 표시
-        # cv2.line(vis, (int(cx_img), my), (mx, my), MID_COLOR, 1, cv2.LINE_AA)
 
         # Bearing 텍스트
         d = "R" if pair.bearing_deg > 0 else ("L" if pair.bearing_deg < 0 else "C")
